@@ -1,33 +1,43 @@
-const { Client, GatewayIntentBits } = require("discord.js");
-const { joinVoiceChannel } = require("@discordjs/voice");
+// index.js
+require('dotenv').config(); // pour récupérer les variables d'environnement
+const { Client, GatewayIntentBits } = require('discord.js');
+const { joinVoiceChannel } = require('@discordjs/voice');
 
+// Crée le client Discord avec les intents nécessaires
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates
-  ]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates
+    ]
 });
 
-client.once("ready", () => {
-  console.log(`Bot connecté : ${client.user.tag}`);
+// Récupération des variables d'environnement
+const TOKEN = process.env.TOKEN;
+const VC_ID = process.env.VC_ID;
 
-  const voiceChannelId = process.env.VOICE_ID; // ID du vocal
-  const channel = client.channels.cache.get(voiceChannelId);
+// Événement "ready"
+client.on('ready', async () => {
+    console.log(`Bot connecté : ${client.user.tag}`);
 
-  if (!channel) {
-    console.log("Salon vocal introuvable !");
-    return;
-  }
+    try {
+        // On récupère le salon vocal directement via l'API
+        const channel = await client.channels.fetch(VC_ID);
+        if (!channel || !channel.isVoiceBased()) {
+            return console.log("Salon vocal introuvable ou non valide !");
+        }
 
-  joinVoiceChannel({
-    channelId: channel.id,
-    guildId: channel.guild.id,
-    adapterCreator: channel.guild.voiceAdapterCreator,
-    selfDeaf: false,
-    selfMute: true
-  });
+        // Connexion au salon vocal
+        joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator
+        });
 
-  console.log("Bot dans le vocal 24/7 ✔");
+        console.log(`Connecté au salon vocal : ${channel.name}`);
+    } catch (err) {
+        console.error("Erreur en rejoignant le salon vocal :", err);
+    }
 });
 
-client.login(process.env.TOKEN);
+// Connexion du bot
+client.login(TOKEN);
