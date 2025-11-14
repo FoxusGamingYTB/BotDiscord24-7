@@ -37,22 +37,7 @@ client.on('ready', async () => {
 });
 
 // Déconnexion si plus d'humains dans le salon
-client.on('voiceStateUpdate', (oldState, newState) => {
-    const connection = getVoiceConnection(newState.guild.id);
-    if (!connection) return; // le bot n'est pas connecté
 
-    const channel = connection.joinConfig.channelId;
-    const voiceChannel = newState.guild.channels.cache.get(channel);
-    if (!voiceChannel) return;
-
-    // Filtrer les humains
-    const humanMembers = voiceChannel.members.filter(member => !member.user.bot);
-
-    if (humanMembers.size === 0) {
-        connection.destroy(); // quitte le salon
-        console.log('Aucun humain dans le salon, le bot quitte.');
-    }
-});
 
 // Connexion du bot
 client.login(TOKEN);
