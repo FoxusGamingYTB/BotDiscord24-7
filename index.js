@@ -23,11 +23,12 @@ client.on('ready', async () => {
         const channel = await client.channels.fetch(VC_ID);
         if (!channel || !channel.isVoiceBased()) return console.log("Salon vocal introuvable !");
 
-        // Rejoindre le salon vocal
+        // Rejoindre le salon vocal avec mode de chiffrement compatible
         joinVoiceChannel({
             channelId: channel.id,
             guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator
+            adapterCreator: channel.guild.voiceAdapterCreator,
+            encryptionMode: 'aead_aes256_gcm_rtpsize' // compatible avec Render
         });
 
         console.log(`Connecté au salon vocal : ${channel.name}`);
@@ -36,8 +37,17 @@ client.on('ready', async () => {
     }
 });
 
-// Déconnexion si plus d'humains dans le salon
+// Optionnel : loguer les humains dans le salon sans déconnecter
+client.on('voiceStateUpdate', (oldState, newState) => {
+    const connection = getVoiceConnection(newState.guild.id);
+    if (!connection) return;
 
+    const voiceChannel = newState.guild.channels.cache.get(connection.joinConfig.channelId);
+    if (!voiceChannel) return;
+
+    const humanMembers = voiceChannel.members.filter(member => !member.user.bot);
+    console.log(`Humains dans le salon : ${humanMembers.map(m => m.user.tag).join(', ') || '0'}`);
+});
 
 // Connexion du bot
 client.login(TOKEN);
