@@ -1,9 +1,22 @@
 // index.js
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel } = require('@discordjs/voice');
+const { 
+    joinVoiceChannel,
+    createAudioPlayer,
+    createAudioResource,
+    NoSubscriberBehavior
+} = require('@discordjs/voice');
+const { Readable } = require('stream');
 
-// Création du client
+// === Flux audio silencieux (obligatoire pour rester connecté) ===
+const silentStream = new Readable({
+    read() {
+        this.push(Buffer.from([0xF8, 0xFF, 0xFE])); // paquet opus silence
+    }
+});
+
+// === Setup du bot ===
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -11,23 +24,19 @@ const client = new Client({
     ]
 });
 
-// Variables d'environnement
 const TOKEN = process.env.TOKEN;
 const VC_ID = process.env.VC_ID;
 
-// Quand le bot démarre
 client.on('ready', async () => {
     console.log(`Bot connecté : ${client.user.tag}`);
 
     try {
         const channel = await client.channels.fetch(VC_ID);
-
         if (!channel || !channel.isVoiceBased()) {
             return console.log("❌ Salon vocal introuvable !");
         }
 
-        // Le bot rejoint et RESTE, quoi qu'il arrive
-        joinVoiceChannel({
+        const connection = joinVoiceChannel({
             channelId: channel.id,
             guildId: channel.guild.id,
             adapterCreator: channel.guild.voiceAdapterCreator,
@@ -35,11 +44,21 @@ client.on('ready', async () => {
             selfMute: false
         });
 
-        console.log(`🔊 Connecté au vocal : ${channel.name}`);
+        // === Player audio silencieux 24/7 ===
+        const player = createAudioPlayer({
+            behaviors: {
+                noSubscriber: NoSubscriberBehavior.Play
+            }
+        });
+
+        const resource = createAudioResource(silentStream);
+        player.play(resource);
+        connection.subscribe(player);
+
+        console.log(`🔊 Connecté au vocal : ${channel.name} (silence 24/7 activé)`);
     } catch (err) {
-        console.error("❌ Erreur en rejoignant :", err);
+        console.error("Erreur :", err);
     }
 });
 
-// Connexion du bot
 client.login(TOKEN);
